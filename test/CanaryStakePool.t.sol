@@ -118,7 +118,7 @@ contract TestCanary is Test, ICanaryStakePoolEvents, ICanaryStakePoolErrors {
         );
         assertEq(claimNFT.ownerOf(1), alice);
         assertEq(claimNFT.balanceOf(alice), 1);
-
+        // Check NFT attributes
         (
             address token,
             uint256 creationTimestamp,
@@ -135,8 +135,37 @@ contract TestCanary is Test, ICanaryStakePoolEvents, ICanaryStakePoolErrors {
         testDeposit_alpha_1week();
         testRequestWithdraw_10_alpha_1week_zero_yield();
 
+        uint256 aliceBalanceBeforeClaim = tokenAlpha.balanceOf(alice);
+        (, , uint256 amount, BondType bondType) = claimNFT.tokenAttributes(1);
+        assertTrue(bondType == BondType.OneWeek);
+        assertEq(claimNFT.balanceOf(alice), 1);
+
         vm.warp(1 weeks + 1);
+        // Perform action
         stakePool.claim(1);
+
+        uint256 aliceBalanceAfterClaim = tokenAlpha.balanceOf(alice);
+        assertGt(aliceBalanceAfterClaim, aliceBalanceBeforeClaim);
+        assertEq(aliceBalanceAfterClaim, aliceBalanceBeforeClaim + amount);
+        assertEq(claimNFT.balanceOf(alice), 0);
+        vm.expectRevert("NOT_MINTED");
+        claimNFT.ownerOf(1);
+    }
+
+    function test_adminYieldDeposit_alpha_1_week_oneYear() public {
+        vm.warp(182 days);
+
+        (uint256 missingYield, ) = stakePool.calculatePendingYield(
+            address(alphaStk_1week)
+        );
+
+        assertGt(missingYield, 0);
+
+        tokenAlpha.mint(admin, missingYield);
+
+        vm.startPrank(admin);
+        tokenAlpha.approve(address(stakePool), missingYield);
+        stakePool.adminYieldDeposit(address(alphaStk_1week));
     }
 
     function setUp() public {

@@ -149,36 +149,28 @@ contract CanaryStakePool is ICanaryStakePool, Pausable, Owned {
     }
 
     function adminYieldDeposit(address stakeTokenAddress) external onlyOwner {
+        (uint256 yield, uint256 lastTimestamp) = calculatePendingYield(
+            stakeTokenAddress
+        );
         StakeBondToken storage stakeToken = stakeBondToken[stakeTokenAddress];
-        require(stakeTokenAddress != address(0), "Invalid stake token address");
-
-        uint256 currentTimestamp = block.timestamp;
-        uint256 lastTimestamp = stakeToken.lastTimestamp;
-        require(lastTimestamp > 0, "Yield deposit: last timestamp is zero");
-
-        uint256 timeElapsed = currentTimestamp - lastTimestamp;
-        uint256 totalSupply = stakeToken.stakingToken.totalAssets();
-
-        uint256 yield = (totalSupply * APY_BPS * timeElapsed) /
-            (10000 * SECONDS_IN_A_YEAR);
 
         if (yield > 0) {
             // Transfer the calculated yield to the staking token contract
-            stakeToken.underlyingToken.transfer(
+            stakeToken.underlyingToken.transferFrom(
+                msg.sender,
                 address(stakeToken.stakingToken),
                 yield
             );
-            stakeToken.lastTimestamp = currentTimestamp;
+            stakeToken.lastTimestamp = block.timestamp;
+            emit YieldDeposit(
+                address(stakeToken.underlyingToken),
+                stakeTokenAddress,
+                msg.sender,
+                yield,
+                lastTimestamp,
+                block.timestamp
+            );
         }
-
-        emit YieldDeposit(
-            address(stakeToken.underlyingToken),
-            stakeTokenAddress,
-            msg.sender,
-            yield,
-            lastTimestamp,
-            currentTimestamp
-        );
     }
 
     function pause() external onlyOwner {
@@ -253,5 +245,23 @@ contract CanaryStakePool is ICanaryStakePool, Pausable, Owned {
         );
 
         return address(canaryStakeToken);
+    }
+
+    function calculatePendingYield(
+        address stakeTokenAddress
+    ) public view returns (uint256 yield, uint256 lastTimestamp) {
+        StakeBondToken memory stakeToken = stakeBondToken[stakeTokenAddress];
+
+        uint256 currentTimestamp = block.timestamp;
+        lastTimestamp = stakeToken.lastTimestamp;
+
+        uint256 timeElapsed = currentTimestamp - lastTimestamp;
+        uint256 totalSupply = stakeToken.stakingToken.totalAssets();
+
+        yield =
+            (totalSupply * APY_BPS * timeElapsed) /
+            (10000 * SECONDS_IN_A_YEAR);
+
+        return (yield, lastTimestamp);
     }
 }
