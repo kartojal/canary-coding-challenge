@@ -13,13 +13,17 @@ import {IERC4626} from "../interfaces/IERC4626.sol";
 import {ICanaryStakePool, BondType, StakeBondToken} from "../interfaces/ICanaryStakePool.sol";
 
 contract CanaryStakePool is ICanaryStakePool, Pausable, Owned {
-    using SafeTransferLib for ERC20;
+    using SafeTransferLib for IERC20;
 
     mapping(address token => bool) public tokenWhitelist;
-    mapping(address token => mapping(BondType => address)) stakeTokenAddress;
-    mapping(address stakeToken => StakeBondToken) stakeBondToken;
+    mapping(address token => mapping(BondType => address))
+        public stakeTokenAddressMap;
+    mapping(address stakeToken => StakeBondToken) public stakeBondToken;
 
     CanaryStakeClaimNFT public immutable canaryClaimNFT;
+
+    uint256 public constant APY_BPS = 500; // 5,00%
+    uint256 public constant SECONDS_IN_A_YEAR = 365 * 24 * 60 * 60;
 
     constructor(
         address admin,
@@ -46,13 +50,13 @@ contract CanaryStakePool is ICanaryStakePool, Pausable, Owned {
         if (bondType == BondType.Matured) {
             revert UnsupportedBondType();
         }
-        address stakeTokenAddress = stakeTokenAddress[token][bondType];
+        address stakeTokenAddress = stakeTokenAddressMap[token][bondType];
 
         if (stakeTokenAddress == address(0)) {
-            stakeTokenAddress = _createBondToken(stakeToken, token, bondType);
+            stakeTokenAddress = _createBondToken(token, bondType);
         }
 
-        StakeBondToken stakeToken = stakeBondToken[stakeTokenAddress];
+        StakeBondToken memory stakeToken = stakeBondToken[stakeTokenAddress];
 
         stakeToken.underlyingToken.transferFrom(
             msg.sender,
@@ -77,15 +81,15 @@ contract CanaryStakePool is ICanaryStakePool, Pausable, Owned {
     function requestWithdraw(
         address stakeTokenAddress,
         uint256 shares
-    ) external returns (uint256 tokenId) {
-        StakeBondToken stakeToken = stakeBondToken[stakeTokenAddress];
+    ) external returns (uint256) {
+        StakeBondToken memory stakeToken = stakeBondToken[stakeTokenAddress];
         address underlyingToken = address(stakeToken.underlyingToken);
 
         if (tokenWhitelist[underlyingToken] != true) {
             revert TokenNotWhitelisted();
         }
 
-        uint256 claimAmount = stakeToken.redeem(
+        uint256 claimAmount = stakeToken.stakingToken.redeem(
             shares,
             address(this), // Redeem and retain user claimed amount until withdraw notice matures
             msg.sender
@@ -93,8 +97,9 @@ contract CanaryStakePool is ICanaryStakePool, Pausable, Owned {
 
         uint256 tokenId = canaryClaimNFT.safeMint(
             msg.sender,
-            stakeToken,
-            claimAmount
+            address(stakeToken.underlyingToken),
+            claimAmount,
+            stakeToken.bondType
         );
 
         emit WithdrawalRequest(
@@ -143,7 +148,38 @@ contract CanaryStakePool is ICanaryStakePool, Pausable, Owned {
         return amount;
     }
 
-    function adminYieldDeposit() external onlyOwner {}
+    function adminYieldDeposit(address stakeTokenAddress) external onlyOwner {
+        StakeBondToken storage stakeToken = stakeBondToken[stakeTokenAddress];
+        require(stakeTokenAddress != address(0), "Invalid stake token address");
+
+        uint256 currentTimestamp = block.timestamp;
+        uint256 lastTimestamp = stakeToken.lastTimestamp;
+        require(lastTimestamp > 0, "Yield deposit: last timestamp is zero");
+
+        uint256 timeElapsed = currentTimestamp - lastTimestamp;
+        uint256 totalSupply = stakeToken.stakingToken.totalAssets();
+
+        uint256 yield = (totalSupply * APY_BPS * timeElapsed) /
+            (10000 * SECONDS_IN_A_YEAR);
+
+        if (yield > 0) {
+            // Transfer the calculated yield to the staking token contract
+            stakeToken.underlyingToken.transfer(
+                address(stakeToken.stakingToken),
+                yield
+            );
+            stakeToken.lastTimestamp = currentTimestamp;
+        }
+
+        emit YieldDeposit(
+            address(stakeToken.underlyingToken),
+            stakeTokenAddress,
+            msg.sender,
+            yield,
+            lastTimestamp,
+            currentTimestamp
+        );
+    }
 
     function pause() external onlyOwner {
         super._pause();
@@ -160,10 +196,9 @@ contract CanaryStakePool is ICanaryStakePool, Pausable, Owned {
     }
 
     function _createBondToken(
-        StakeBondToken storage stakeBondTokenStg,
         address token,
         BondType bondType
-    ) internal {
+    ) internal returns (address) {
         string memory bondTypeString;
         string memory tokenName;
         string memory tokenSymbol;
@@ -187,21 +222,36 @@ contract CanaryStakePool is ICanaryStakePool, Pausable, Owned {
             bondTypeString
         );
 
-        stakeBondTokenStg.bondType = bondType;
-        stakeBondTokenStg.underlyingToken = IERC20(token);
-        stakeBondTokenStg.stakingToken = ICanaryStakeToken(
-            new CanaryStakeToken(
-                tokenName,
-                tokenSymbol,
-                IERC20(token).decimals(),
-                address(this)
+        IERC4626 canaryStakeToken = IERC4626(
+            address(
+                new CanaryStakeToken(
+                    token,
+                    tokenName,
+                    tokenSymbol,
+                    IERC20(token).decimals(),
+                    address(this)
+                )
             )
         );
+        IERC20(token).approve(address(canaryStakeToken), type(uint256).max);
+
+        StakeBondToken storage stakeBondTokenStg = stakeBondToken[
+            address(canaryStakeToken)
+        ];
+
+        stakeBondTokenStg.bondType = bondType;
+        stakeBondTokenStg.underlyingToken = IERC20(token);
+        stakeBondTokenStg.stakingToken = canaryStakeToken;
+        stakeBondTokenStg.lastTimestamp = block.timestamp;
+
+        stakeTokenAddressMap[token][bondType] = address(canaryStakeToken);
 
         emit StakeTokenDeployed(
             address(stakeBondTokenStg.stakingToken),
             token,
             bondType
         );
+
+        return address(canaryStakeToken);
     }
 }

@@ -6,6 +6,8 @@ import {ERC4626} from "solmate/tokens/ERC4626.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 
+import "forge-std/console.sol";
+
 contract CanaryStakeToken is ERC4626, Owned {
     using SafeTransferLib for ERC20;
 
@@ -94,10 +96,12 @@ contract CanaryStakeToken is ERC4626, Owned {
 
         emit Withdraw(msg.sender, receiver, owner, assets, shares);
 
+        console.log(asset.balanceOf(address(this)), assets);
+
         asset.safeTransfer(receiver, assets);
     }
 
     function totalAssets() public view override returns (uint256) {
-        return asset.totalSupply();
+        return asset.balanceOf(address(this));
     }
 }

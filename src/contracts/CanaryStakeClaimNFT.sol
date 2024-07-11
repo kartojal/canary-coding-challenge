@@ -65,7 +65,12 @@ contract CanaryStakeClaimNFT is ERC721, Owned {
     }
 
     function burn(uint256 tokenId) external onlyOwner {
-        tokenAttributes[tokenId] = Attributes(address(0), 0);
+        tokenAttributes[tokenId] = Attributes(
+            address(0),
+            0,
+            0,
+            BondType.Matured
+        );
 
         _burn(tokenId);
     }
@@ -73,14 +78,16 @@ contract CanaryStakeClaimNFT is ERC721, Owned {
     function safeMint(
         address to,
         address token,
-        uint256 claimAmount
+        uint256 claimAmount,
+        BondType bondType
     ) external onlyOwner returns (uint256) {
         uint256 newTokenId = ++currentTokenId;
 
         tokenAttributes[newTokenId] = Attributes(
             token,
             block.timestamp,
-            claimAmount
+            claimAmount,
+            bondType
         );
 
         _safeMint(to, newTokenId);

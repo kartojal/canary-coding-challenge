@@ -3,14 +3,13 @@
 
 pragma solidity ^0.8.20;
 
-import {IERC20} from "../token/ERC20/IERC20.sol";
-import {IERC20Metadata} from "../token/ERC20/extensions/IERC20Metadata.sol";
+import {IERC20} from "./IERC20.sol";
 
 /**
  * @dev Interface of the ERC-4626 "Tokenized Vault Standard", as defined in
  * https://eips.ethereum.org/EIPS/eip-4626[ERC-4626].
  */
-interface IERC4626 is IERC20, IERC20Metadata {
+interface IERC4626 is IERC20 {
     event Deposit(
         address indexed sender,
         address indexed owner,
@@ -25,6 +24,21 @@ interface IERC4626 is IERC20, IERC20Metadata {
         uint256 assets,
         uint256 shares
     );
+
+    /**
+     * @dev Returns the name of the token.
+     */
+    function name() external view returns (string memory);
+
+    /**
+     * @dev Returns the symbol of the token.
+     */
+    function symbol() external view returns (string memory);
+
+    /**
+     * @dev Returns the decimals places of the token.
+     */
+    function decimals() external view returns (uint8);
 
     /**
      * @dev Returns the address of the underlying token used for the Vault for accounting, depositing, and withdrawing.
