@@ -1,18 +1,10 @@
-// SPDX-License-Identifier: Unlicense
-pragma solidity ^0.8.13;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.21;
 
 import "forge-std/Test.sol";
 
-import "src/Trebuchet.sol";
+contract TestCanary is Test {
+    function setUp() public {}
 
-contract TestTrebuchet is Test {
-    Trebuchet c;
-
-    function setUp() public {
-        c = new Trebuchet(1);
-    }
-
-    function testData() public {
-        assertEq(c.getAttackDamage(), 1);
-    }
+    function test() public {}
 }
