@@ -66,7 +66,7 @@ forge test
 
 Run tests coverage
 ```
-make coverage
+make test-coverage
 ```
 
 
