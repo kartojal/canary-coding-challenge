@@ -44,6 +44,16 @@ The repository contains 100% test coverage of the lines, but still there could b
 
 ## Getting Started
 
+Copy .env.example to .env 
+```
+cp .env.example .env
+```
+
+Instal Foundry dependencies
+```
+forge install
+```
+
 Compile contracts
 ```
 forge compile
@@ -58,6 +68,13 @@ Run tests coverage
 ```
 make coverage
 ```
+
+
+Run fork tests in Ethereum mainnet
+```
+make fork-test-ethereum
+```
+
 
 Deploy with Forge, locally
 ```

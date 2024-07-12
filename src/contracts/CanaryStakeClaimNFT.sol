@@ -7,6 +7,8 @@ import {LibString} from "solmate/utils/LibString.sol";
 import {Base64} from "../utils/Base64.sol";
 import {BondType} from "../interfaces/ICanaryStakePool.sol";
 
+/// @title CanaryStakeClaimNFT
+/// @notice See the documentation in README.md at root of repository
 contract CanaryStakeClaimNFT is ERC721, Owned {
     uint256 public currentTokenId;
 
@@ -19,13 +21,31 @@ contract CanaryStakeClaimNFT is ERC721, Owned {
 
     mapping(uint256 tokenId => Attributes) public tokenAttributes;
 
-    constructor(string memory name, string memory symbol, address admin) ERC721(name, symbol) Owned(admin) {}
+    /// @dev Initializes a CanaryStakeClaimNFT contract and is owned by the admin (CanaryStakePool)
+    /// @param name The name of the NFT
+    /// @param symbol The symbol of the NFT
+    /// @param admin The address of the admin (CanaryStakePool)
+    constructor(
+        string memory name,
+        string memory symbol,
+        address admin
+    ) ERC721(name, symbol) Owned(admin) {}
 
-    function tokenURI(uint256 tokenId) public pure override returns (string memory) {
+    /// @notice Returns the URI for a given token ID
+    /// @dev The NFT content static content is stored on-chain, see renderAsDataUri function
+    /// @param tokenId The token ID
+    function tokenURI(
+        uint256 tokenId
+    ) public pure override returns (string memory) {
         return renderAsDataUri(tokenId);
     }
 
-    function renderAsDataUri(uint256 _tokenId) public pure returns (string memory) {
+    /// @notice Renders the NFT as a data URI
+    /// @dev The NFT content static content is stored on-chain, see renderAsDataUri function
+    /// @param _tokenId The token ID
+    function renderAsDataUri(
+        uint256 _tokenId
+    ) public pure returns (string memory) {
         string memory svg;
 
         svg = string.concat(
@@ -34,7 +54,11 @@ contract CanaryStakeClaimNFT is ERC721, Owned {
             "</svg>"
         );
 
-        string memory image = string.concat('"image":"data:image/svg+xml;base64,', Base64.encode(bytes(svg)), '"');
+        string memory image = string.concat(
+            '"image":"data:image/svg+xml;base64,',
+            Base64.encode(bytes(svg)),
+            '"'
+        );
 
         string memory json = string.concat(
             '{"name":"Canary Claim NFT',
@@ -45,23 +69,46 @@ contract CanaryStakeClaimNFT is ERC721, Owned {
             "}"
         );
 
-        return string.concat("data:application/json;base64,", Base64.encode(bytes(json)));
+        return
+            string.concat(
+                "data:application/json;base64,",
+                Base64.encode(bytes(json))
+            );
     }
 
+    /// @notice Burns NFT
+    /// @dev Only owner can burn NFTs
+    /// @param tokenId The token ID
     function burn(uint256 tokenId) external onlyOwner {
-        tokenAttributes[tokenId] = Attributes(address(0), 0, 0, BondType.Matured);
+        tokenAttributes[tokenId] = Attributes(
+            address(0),
+            0,
+            0,
+            BondType.Matured
+        );
 
         _burn(tokenId);
     }
 
-    function safeMint(address to, address token, uint256 claimAmount, BondType bondType)
-        external
-        onlyOwner
-        returns (uint256)
-    {
+    /// @notice Safe mints a new NFT with the given Claim attributes
+    /// @param to The address to mint the NFT to
+    /// @param token The address of the token
+    /// @param claimAmount The claim amount
+    /// @param bondType The bond type
+    function safeMint(
+        address to,
+        address token,
+        uint256 claimAmount,
+        BondType bondType
+    ) external onlyOwner returns (uint256) {
         uint256 newTokenId = ++currentTokenId;
 
-        tokenAttributes[newTokenId] = Attributes(token, block.timestamp, claimAmount, bondType);
+        tokenAttributes[newTokenId] = Attributes(
+            token,
+            block.timestamp,
+            claimAmount,
+            bondType
+        );
 
         _safeMint(to, newTokenId);
 
