@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import {IERC20} from "./IERC20.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
 import {IERC4626} from "./IERC4626.sol";
 
 interface ICanaryStakePoolEvents {
@@ -82,7 +82,7 @@ enum BondType {
 
 struct StakeBondToken {
     BondType bondType;
-    IERC20 underlyingToken;
+    ERC20 underlyingToken;
     IERC4626 stakingToken;
     uint256 lastTimestamp;
 }

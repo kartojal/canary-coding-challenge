@@ -2,18 +2,18 @@
 pragma solidity ^0.8.26;
 
 import {Owned} from "solmate/auth/Owned.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
 import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 
 import {Pausable} from "../utils/Pausable.sol";
 import {CanaryStakeClaimNFT} from "./CanaryStakeClaimNFT.sol";
 import {CanaryStakeToken} from "./CanaryStakeToken.sol";
 
-import {IERC20} from "../interfaces/IERC20.sol";
 import {IERC4626} from "../interfaces/IERC4626.sol";
 import {ICanaryStakePool, BondType, StakeBondToken} from "../interfaces/ICanaryStakePool.sol";
 
 contract CanaryStakePool is ICanaryStakePool, Pausable, Owned {
-    using SafeTransferLib for IERC20;
+    using SafeTransferLib for ERC20;
 
     mapping(address token => bool) public tokenWhitelist;
     mapping(address token => mapping(BondType => address))
@@ -58,7 +58,7 @@ contract CanaryStakePool is ICanaryStakePool, Pausable, Owned {
 
         StakeBondToken memory stakeToken = stakeBondToken[stakeTokenAddress];
 
-        stakeToken.underlyingToken.transferFrom(
+        stakeToken.underlyingToken.safeTransferFrom(
             msg.sender,
             address(this),
             amount
@@ -141,7 +141,7 @@ contract CanaryStakePool is ICanaryStakePool, Pausable, Owned {
 
         canaryClaimNFT.burn(tokenId);
 
-        IERC20(token).transfer(msg.sender, amount);
+        ERC20(token).transfer(msg.sender, amount);
 
         emit Withdrawal(token, tokenId, bondType, amount);
 
@@ -156,7 +156,7 @@ contract CanaryStakePool is ICanaryStakePool, Pausable, Owned {
 
         if (yield > 0) {
             // Transfer the calculated yield to the staking token contract
-            stakeToken.underlyingToken.transferFrom(
+            stakeToken.underlyingToken.safeTransferFrom(
                 msg.sender,
                 address(stakeToken.stakingToken),
                 yield
@@ -202,14 +202,14 @@ contract CanaryStakePool is ICanaryStakePool, Pausable, Owned {
         }
         tokenName = string.concat(
             "Canary st",
-            IERC20(token).symbol(),
+            ERC20(token).symbol(),
             " ",
             bondTypeString,
             " notice"
         );
         tokenSymbol = string.concat(
             "CANARY-ST",
-            IERC20(token).symbol(),
+            ERC20(token).symbol(),
             "-",
             bondTypeString
         );
@@ -220,19 +220,19 @@ contract CanaryStakePool is ICanaryStakePool, Pausable, Owned {
                     token,
                     tokenName,
                     tokenSymbol,
-                    IERC20(token).decimals(),
+                    ERC20(token).decimals(),
                     address(this)
                 )
             )
         );
-        IERC20(token).approve(address(canaryStakeToken), type(uint256).max);
+        ERC20(token).approve(address(canaryStakeToken), type(uint256).max);
 
         StakeBondToken storage stakeBondTokenStg = stakeBondToken[
             address(canaryStakeToken)
         ];
 
         stakeBondTokenStg.bondType = bondType;
-        stakeBondTokenStg.underlyingToken = IERC20(token);
+        stakeBondTokenStg.underlyingToken = ERC20(token);
         stakeBondTokenStg.stakingToken = canaryStakeToken;
         stakeBondTokenStg.lastTimestamp = block.timestamp;
 

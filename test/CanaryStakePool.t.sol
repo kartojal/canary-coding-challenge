@@ -83,7 +83,6 @@ contract TestCanary is Test, ICanaryStakePoolEvents, ICanaryStakePoolErrors {
     }
 
     function testRequestWithdraw_10_alpha_1week_zero_yield() public {
-        // Perform a deposit, before doing withdrawalRequest
         uint256 shares = 10 ether;
         uint256 expectedClaimAmount = alphaStk_1week.previewRedeem(shares);
         uint256 aliceSharesBeforeAction = alphaStk_1week.balanceOf(alice);
@@ -132,7 +131,6 @@ contract TestCanary is Test, ICanaryStakePoolEvents, ICanaryStakePoolErrors {
     }
 
     function testClaim_10_alpha_1week_zero_yield() public {
-        testDeposit_alpha_1week();
         testRequestWithdraw_10_alpha_1week_zero_yield();
 
         uint256 aliceBalanceBeforeClaim = tokenAlpha.balanceOf(alice);
@@ -152,8 +150,8 @@ contract TestCanary is Test, ICanaryStakePoolEvents, ICanaryStakePoolErrors {
         claimNFT.ownerOf(1);
     }
 
-    function test_adminYieldDeposit_alpha_1_week_oneYear() public {
-        vm.warp(182 days);
+    function test_adminYieldDeposit_alpha_1_week_oneYear_yield() public {
+        vm.warp(365 days);
 
         (uint256 missingYield, ) = stakePool.calculatePendingYield(
             address(alphaStk_1week)
@@ -166,6 +164,56 @@ contract TestCanary is Test, ICanaryStakePoolEvents, ICanaryStakePoolErrors {
         vm.startPrank(admin);
         tokenAlpha.approve(address(stakePool), missingYield);
         stakePool.adminYieldDeposit(address(alphaStk_1week));
+    }
+
+    function test_requestWithdraw_10_alpha_1_week_oneYear_yield() public {
+        testDeposit_alpha_1week();
+        test_adminYieldDeposit_alpha_1_week_oneYear_yield();
+        uint256 shares = 10 ether;
+        uint256 expectedClaimAmount = alphaStk_1week.previewRedeem(shares);
+        uint256 aliceSharesBeforeAction = alphaStk_1week.balanceOf(alice);
+        assertNotEq(shares, 0);
+
+        vm.startPrank(alice);
+
+        alphaStk_1week.approve(address(stakePool), shares);
+
+        vm.expectEmit(true, true, true, true);
+        emit WithdrawalRequest(
+            address(tokenAlpha),
+            address(alphaStk_1week),
+            alice,
+            BondType.OneWeek,
+            1,
+            expectedClaimAmount,
+            shares
+        );
+
+        // Perform action
+        uint256 tokenId = stakePool.requestWithdraw(
+            address(alphaStk_1week),
+            shares
+        );
+
+        // Assertions
+        assertEq(tokenId, 1);
+        assertEq(
+            alphaStk_1week.balanceOf(alice),
+            aliceSharesBeforeAction - 10 ether
+        );
+        assertEq(claimNFT.ownerOf(1), alice);
+        assertEq(claimNFT.balanceOf(alice), 1);
+        // Check NFT attributes
+        (
+            address token,
+            uint256 creationTimestamp,
+            uint256 amount,
+            BondType bondType
+        ) = claimNFT.tokenAttributes(tokenId);
+        assertEq(token, address(tokenAlpha));
+        assertEq(creationTimestamp, block.timestamp);
+        assertEq(amount, expectedClaimAmount);
+        assertTrue(bondType == BondType.OneWeek);
     }
 
     function setUp() public {
