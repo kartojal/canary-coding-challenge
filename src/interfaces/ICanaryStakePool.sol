@@ -6,11 +6,7 @@ import {IERC4626} from "./IERC4626.sol";
 
 interface ICanaryStakePoolEvents {
     event TokenWhitelistUpdate(address indexed token, bool indexed value);
-    event StakeTokenDeployed(
-        address indexed stakeToken,
-        address indexed underlyingToken,
-        BondType indexed bondType
-    );
+    event StakeTokenDeployed(address indexed stakeToken, address indexed underlyingToken, BondType indexed bondType);
     event Deposit(
         address indexed token,
         address indexed stakeToken,
@@ -28,12 +24,7 @@ interface ICanaryStakePoolEvents {
         uint256 claimAmount,
         uint256 shares
     );
-    event Withdrawal(
-        address indexed token,
-        uint256 indexed tokenId,
-        BondType bondType,
-        uint256 claimAmount
-    );
+    event Withdrawal(address indexed token, uint256 indexed tokenId, BondType bondType, uint256 claimAmount);
     event YieldDeposit(
         address indexed token,
         address indexed stakeToken,
@@ -52,16 +43,9 @@ interface ICanaryStakePoolErrors {
 }
 
 interface ICanaryStakePool is ICanaryStakePoolEvents, ICanaryStakePoolErrors {
-    function deposit(
-        address token,
-        uint256 amount,
-        BondType bondType
-    ) external returns (uint256);
+    function deposit(address token, uint256 amount, BondType bondType) external returns (uint256);
 
-    function requestWithdraw(
-        address stakeTokenAddress,
-        uint256 shares
-    ) external returns (uint256);
+    function requestWithdraw(address stakeTokenAddress, uint256 shares) external returns (uint256);
 
     function claim(uint256 tokenId) external returns (uint256);
 

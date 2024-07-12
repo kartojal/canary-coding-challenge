@@ -6,23 +6,15 @@ import {ERC4626} from "solmate/tokens/ERC4626.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 
-import "forge-std/console.sol";
-
 contract CanaryStakeToken is ERC4626, Owned {
     using SafeTransferLib for ERC20;
 
-    constructor(
-        address underlyingToken,
-        string memory name,
-        string memory symbol,
-        uint8 decimals,
-        address admin
-    ) ERC4626(ERC20(underlyingToken), name, symbol) Owned(admin) {}
+    constructor(address underlyingToken, string memory name, string memory symbol, uint8 decimals, address admin)
+        ERC4626(ERC20(underlyingToken), name, symbol)
+        Owned(admin)
+    {}
 
-    function deposit(
-        uint256 assets,
-        address receiver
-    ) public override onlyOwner returns (uint256 shares) {
+    function deposit(uint256 assets, address receiver) public override onlyOwner returns (uint256 shares) {
         // Check for rounding error since we round down in previewDeposit.
         require((shares = previewDeposit(assets)) != 0, "ZERO_SHARES");
 
@@ -36,10 +28,7 @@ contract CanaryStakeToken is ERC4626, Owned {
         afterDeposit(assets, shares);
     }
 
-    function mint(
-        uint256 shares,
-        address receiver
-    ) public override onlyOwner returns (uint256 assets) {
+    function mint(uint256 shares, address receiver) public override onlyOwner returns (uint256 assets) {
         assets = previewMint(shares); // No need to check for rounding error, previewMint rounds up.
 
         // Need to transfer before minting or ERC777s could reenter.
@@ -52,18 +41,20 @@ contract CanaryStakeToken is ERC4626, Owned {
         afterDeposit(assets, shares);
     }
 
-    function withdraw(
-        uint256 assets,
-        address receiver,
-        address owner
-    ) public override onlyOwner returns (uint256 shares) {
+    function withdraw(uint256 assets, address receiver, address owner)
+        public
+        override
+        onlyOwner
+        returns (uint256 shares)
+    {
         shares = previewWithdraw(assets); // No need to check for rounding error, previewWithdraw rounds up.
 
         if (msg.sender != owner) {
             uint256 allowed = allowance[owner][msg.sender]; // Saves gas for limited approvals.
 
-            if (allowed != type(uint256).max)
+            if (allowed != type(uint256).max) {
                 allowance[owner][msg.sender] = allowed - shares;
+            }
         }
 
         beforeWithdraw(assets, shares);
@@ -75,16 +66,18 @@ contract CanaryStakeToken is ERC4626, Owned {
         asset.safeTransfer(receiver, assets);
     }
 
-    function redeem(
-        uint256 shares,
-        address receiver,
-        address owner
-    ) public override onlyOwner returns (uint256 assets) {
+    function redeem(uint256 shares, address receiver, address owner)
+        public
+        override
+        onlyOwner
+        returns (uint256 assets)
+    {
         if (msg.sender != owner) {
             uint256 allowed = allowance[owner][msg.sender]; // Saves gas for limited approvals.
 
-            if (allowed != type(uint256).max)
+            if (allowed != type(uint256).max) {
                 allowance[owner][msg.sender] = allowed - shares;
+            }
         }
 
         // Check for rounding error since we round down in previewRedeem.
@@ -95,8 +88,6 @@ contract CanaryStakeToken is ERC4626, Owned {
         _burn(owner, shares);
 
         emit Withdraw(msg.sender, receiver, owner, assets, shares);
-
-        console.log(asset.balanceOf(address(this)), assets);
 
         asset.safeTransfer(receiver, assets);
     }

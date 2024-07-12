@@ -5,9 +5,7 @@ pragma solidity >=0.8.0;
 /// @author @Vectorized, src: https://github.com/transmissions11/solmate/pull/261/files
 /// @author Modified from (https://github.com/Brechtpd/base64/blob/main/base64.sol) by Brecht Devos - <brecht@loopring.org>.
 library Base64 {
-    function encode(
-        bytes memory data
-    ) internal pure returns (string memory result) {
+    function encode(bytes memory data) internal pure returns (string memory result) {
         assembly {
             let dataLength := mload(data)
 
@@ -40,10 +38,10 @@ library Base64 {
                     let input := mload(data)
 
                     // Write 4 characters. Optimized for fewer stack operations.
-                    mstore8(    ptr    , mload(and(shr(18, input), 0x3F)))
+                    mstore8(ptr, mload(and(shr(18, input), 0x3F)))
                     mstore8(add(ptr, 1), mload(and(shr(12, input), 0x3F)))
-                    mstore8(add(ptr, 2), mload(and(shr( 6, input), 0x3F)))
-                    mstore8(add(ptr, 3), mload(and(        input , 0x3F)))
+                    mstore8(add(ptr, 2), mload(and(shr(6, input), 0x3F)))
+                    mstore8(add(ptr, 3), mload(and(input, 0x3F)))
 
                     ptr := add(ptr, 4) // Advance 4 bytes.
                 }

@@ -19,21 +19,13 @@ contract CanaryStakeClaimNFT is ERC721, Owned {
 
     mapping(uint256 tokenId => Attributes) public tokenAttributes;
 
-    constructor(
-        string memory name,
-        string memory symbol,
-        address admin
-    ) ERC721(name, symbol) Owned(admin) {}
+    constructor(string memory name, string memory symbol, address admin) ERC721(name, symbol) Owned(admin) {}
 
-    function tokenURI(
-        uint256 tokenId
-    ) public pure override returns (string memory) {
+    function tokenURI(uint256 tokenId) public pure override returns (string memory) {
         return renderAsDataUri(tokenId);
     }
 
-    function renderAsDataUri(
-        uint256 _tokenId
-    ) public pure returns (string memory) {
+    function renderAsDataUri(uint256 _tokenId) public pure returns (string memory) {
         string memory svg;
 
         svg = string.concat(
@@ -42,11 +34,7 @@ contract CanaryStakeClaimNFT is ERC721, Owned {
             "</svg>"
         );
 
-        string memory image = string.concat(
-            '"image":"data:image/svg+xml;base64,',
-            Base64.encode(bytes(svg)),
-            '"'
-        );
+        string memory image = string.concat('"image":"data:image/svg+xml;base64,', Base64.encode(bytes(svg)), '"');
 
         string memory json = string.concat(
             '{"name":"Canary Claim NFT',
@@ -57,38 +45,23 @@ contract CanaryStakeClaimNFT is ERC721, Owned {
             "}"
         );
 
-        return
-            string.concat(
-                "data:application/json;base64,",
-                Base64.encode(bytes(json))
-            );
+        return string.concat("data:application/json;base64,", Base64.encode(bytes(json)));
     }
 
     function burn(uint256 tokenId) external onlyOwner {
-        tokenAttributes[tokenId] = Attributes(
-            address(0),
-            0,
-            0,
-            BondType.Matured
-        );
+        tokenAttributes[tokenId] = Attributes(address(0), 0, 0, BondType.Matured);
 
         _burn(tokenId);
     }
 
-    function safeMint(
-        address to,
-        address token,
-        uint256 claimAmount,
-        BondType bondType
-    ) external onlyOwner returns (uint256) {
+    function safeMint(address to, address token, uint256 claimAmount, BondType bondType)
+        external
+        onlyOwner
+        returns (uint256)
+    {
         uint256 newTokenId = ++currentTokenId;
 
-        tokenAttributes[newTokenId] = Attributes(
-            token,
-            block.timestamp,
-            claimAmount,
-            bondType
-        );
+        tokenAttributes[newTokenId] = Attributes(token, block.timestamp, claimAmount, bondType);
 
         _safeMint(to, newTokenId);
 

@@ -2,11 +2,14 @@
 pragma solidity ^0.8.26;
 
 import {Script} from "forge-std/Script.sol";
+import {CanaryStakePool} from "../src/contracts/CanaryStakePool.sol";
 
-contract DeploySiege is Script {
+contract Deploy is Script {
     function run() public {
-        vm.startBroadcast();
+        address[] memory emptyAddressList = new address[](0);
 
+        vm.startBroadcast();
+        new CanaryStakePool(msg.sender, emptyAddressList);
         vm.stopBroadcast();
     }
 }
